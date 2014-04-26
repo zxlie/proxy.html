@@ -1,0 +1,88 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <title>Proxy Page</title>
+    <script type="text/javascript">
+        // 组件版本
+        var version = '1.0';
+        (function(){
+            if(top !== self){
+                var s = (location.hash || location.search).substr(1).split('&'), //提取参数
+                        fun = '', // 回调方法
+                        isParentScope = false, g, scope, //范围：parent or top
+                        reg = /[^\w\.]/g,  // 回调方法正则
+                        args = {},isArgsJson = true,
+                        domain = document.domain; // 参数
+
+                for(var i=0,l=s.length,item;i<l;i++){
+                    item = (s[i] || '').split('=');
+                    if(item[0] === 'fun'){  // 回调方法
+                        fun = item[1].replace(reg, '');
+                    }else if(item[0] === 'scope' && item[1] == 'parent'){ // 标记范围
+                        isParentScope = true;
+                    }else if(item[0] === 'domain' && item[1]){ // 标记范围
+                        domain = item[1];
+                    }else if(item[0] === 'arg'){    // 聚合参数
+                        if(isArgsJson) {
+                            isArgsJson = false;
+                            args = [];
+                        }
+                        args.push(item[1]);
+                    }else{  // 参数聚合
+                        args[item[0].replace(reg, '')]=(item[1] || '').replace(/[><\'\"\{\}]/g, '');
+                    }
+                }
+
+                // 设置scope
+                var _setScope = function(isParentScope) {
+                    if(isParentScope) {
+                        scope = g = parent;
+                    }else{
+                        scope = g = top;
+                    }
+                };
+
+                // domain校验、设定
+                try{
+                    _setScope(isParentScope);
+                    // 这一步用来校验是否存在跨域问题
+                    scope.document;
+                }catch(ex){
+                    // 跨域了，就需要设置domain了
+                    document.domain = domain ;
+                    _setScope(isParentScope);
+                }
+
+                try{
+                    fun = fun.split('.');
+                    if(fun[0] === 'window'
+                            || fun[0] === 'document'
+                            || fun[0] === 'location'
+                            || fun[0] === 'alert'
+                            || fun[0].indexOf('.alert') > -1){
+                    }else{
+                        // 回调方法拼接
+                        for(var i=0,l=fun.length;i<l;i++){
+                            if(i<l-1){
+                                scope = scope[fun[i]];
+                            }
+                            g = g[fun[i]];
+                        }
+
+                        // 方法回调
+                        if(isArgsJson){
+                            g.call(scope,args);
+                        }else{
+                            g.apply(scope,args);
+                        }
+                    }
+                }catch(e){}
+            }
+        })();
+    </script>
+</head>
+<body>
+
+</body>
+</html>
